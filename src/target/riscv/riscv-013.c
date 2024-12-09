@@ -2217,19 +2217,19 @@ static int examine(struct target *target)
 	/* Don't call any riscv_* functions until after we've counted the number of
 	 * cores and initialized registers. */
 
-	enum riscv_hart_state state_at_examine_start;
-	if (riscv_get_hart_state(target, &state_at_examine_start) != ERROR_OK)
+	enum riscv_hart_state riscv_state_at_examine_start;
+	if (riscv_get_hart_state(target, &riscv_state_at_examine_start) != ERROR_OK)
 		return ERROR_FAIL;
 
 	/* Skip full examination and reporting of hart if it is currently unavailable */
-	const bool hart_unavailable_at_examine_start = state_at_examine_start == RISCV_STATE_UNAVAILABLE;
+	const bool hart_unavailable_at_examine_start = riscv_state_at_examine_start == RISCV_STATE_UNAVAILABLE;
 	if (hart_unavailable_at_examine_start) {
 		LOG_TARGET_DEBUG(target, "Did not fully examine hart %d as it was currently unavailable, deferring examine.", info->index);
 		target->state = TARGET_UNAVAILABLE;
 		target->defer_examine = true;
 		return ERROR_OK;
 	}
-	const bool hart_halted_at_examine_start = state_at_examine_start == RISCV_STATE_HALTED;
+	const bool hart_halted_at_examine_start = riscv_state_at_examine_start == RISCV_STATE_HALTED;
 	if (!hart_halted_at_examine_start) {
 		if (riscv013_halt_target(target) != ERROR_OK) {
 			LOG_TARGET_ERROR(target, "Fatal: Hart %d failed to halt during %s",
@@ -2330,11 +2330,11 @@ static int examine(struct target *target)
 	if (set_dcsr_ebreak(target, false) != ERROR_OK)
 		return ERROR_FAIL;
 
-	if (state_at_examine_start == RISCV_STATE_RUNNING) {
+	if (riscv_state_at_examine_start == RISCV_STATE_RUNNING) {
 		riscv013_step_or_resume_current_hart(target, false);
 		target->state = TARGET_RUNNING;
 		target->debug_reason = DBG_REASON_NOTHALTED;
-	} else if (state_at_examine_start == RISCV_STATE_HALTED) {
+	} else if (riscv_state_at_examine_start == RISCV_STATE_HALTED) {
 		target->state = TARGET_HALTED;
 		target->debug_reason = DBG_REASON_UNDEFINED;
 	}
@@ -2868,7 +2868,7 @@ static int sample_memory(struct target *target,
 	return sample_memory_bus_v1(target, buf, config, until_ms);
 }
 
-static int riscv013_get_hart_state(struct target *target, enum riscv_hart_state *state)
+static int riscv013_get_hart_state(struct target *target, enum riscv_hart_state *riscv_state)
 {
 	RISCV013_INFO(info);
 	if (dm013_select_target(target) != ERROR_OK)
@@ -2900,19 +2900,19 @@ static int riscv013_get_hart_state(struct target *target, enum riscv_hart_state 
 		dm_write(target, DM_DMCONTROL, dmcontrol);
 	}
 	if (get_field(dmstatus, DM_DMSTATUS_ALLNONEXISTENT)) {
-		*state = RISCV_STATE_NON_EXISTENT;
+		*riscv_state = RISCV_STATE_NON_EXISTENT;
 		return ERROR_OK;
 	}
 	if (get_field(dmstatus, DM_DMSTATUS_ALLUNAVAIL)) {
-		*state = RISCV_STATE_UNAVAILABLE;
+		*riscv_state = RISCV_STATE_UNAVAILABLE;
 		return ERROR_OK;
 	}
 	if (get_field(dmstatus, DM_DMSTATUS_ALLHALTED)) {
-		*state = RISCV_STATE_HALTED;
+		*riscv_state = RISCV_STATE_HALTED;
 		return ERROR_OK;
 	}
 	if (get_field(dmstatus, DM_DMSTATUS_ALLRUNNING)) {
-		*state = RISCV_STATE_RUNNING;
+		*riscv_state = RISCV_STATE_RUNNING;
 		return ERROR_OK;
 	}
 	LOG_TARGET_ERROR(target, "Couldn't determine state. dmstatus=0x%x", dmstatus);

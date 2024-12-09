@@ -199,7 +199,7 @@ struct riscv_info {
 	int (*set_register_buf)(struct target *target, enum gdb_regno regno,
 			const uint8_t *buf);
 	int (*select_target)(struct target *target);
-	int (*get_hart_state)(struct target *target, enum riscv_hart_state *state);
+	int (*get_hart_state)(struct target *target, enum riscv_hart_state *riscv_state);
 	/* Resume this target, as well as every other prepped target that can be
 	 * resumed near-simultaneously. Clear the prepped flag on any target that
 	 * was resumed. */
@@ -427,7 +427,7 @@ int riscv_flush_registers(struct target *target);
 
 /* Checks the state of the current hart -- "is_halted" checks the actual
  * on-device register. */
-int riscv_get_hart_state(struct target *target, enum riscv_hart_state *state);
+int riscv_get_hart_state(struct target *target, enum riscv_hart_state *riscv_state);
 
 /* These helper functions let the generic program interface get target-specific
  * information. */
